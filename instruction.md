@@ -1,96 +1,88 @@
-# INSTRUCTION.md
+# Updated Instructions
 
-## Testing the Application
+## Introduction
 
-This document provides instructions to test the ToDo application through various methods:
-
----
-
-### 1. Testing Application via ClusterIP Service DNS (From a BusyBox Container)
-
-1. **Deploy the BusyBox Pod**:
-   Run the following command to create a BusyBox pod for testing:
-   ```bash
-   kubectl run busybox --image=busybox --restart=Never --command -- sleep 3600
-   ```
-
-2. **Exec into the BusyBox Pod**:
-   Once the pod is running, access it using:
-   ```bash
-   kubectl exec -it busybox -- sh
-   ```
-
-3. **Query the ClusterIP Service DNS**:
-   Run the command below, replacing `<service-name>` and `<namespace>` with the respective service's name and namespace:
-   ```bash
-   wget -qO- <service-name>.<namespace>.svc.cluster.local:<port>
-   ```
-   Example:
-   ```bash
-   wget -qO- todo-app.default.svc.cluster.local:8080
-   ```
+This guide assumes you are deploying the `todoapp` application on Kubernetes. Ensure that you have the proper Kubernetes
+manifests configured.
 
 ---
 
-### 2. Testing ToDo Application Using Service Port-Forward Command
+## Services Overview
 
-1. **Find the Service**:
-   Identify the service associated with the ToDo application:
-   ```bash
-   kubectl get svc
-   ```
+The `todoapp` application has the following services defined in the Kubernetes manifests:
 
-2. **Port-Forward the Service**:
-   Use the following command to forward a local port to the service's port:
-   ```bash
-   kubectl port-forward svc/<service-name> <local-port>:<service-port>
-   ```
-   Example:
-   ```bash
-   kubectl port-forward svc/todo-app 8080:8080
-   ```
+1. **ClusterIP Service**
+   - Name: `todoapp-clusterip-service`
+   - Port: `80`
 
-3. **Access the Application**:
-   Open your browser or use a tool like `curl` to access the application at:
-   ```bash
-   http://localhost:<local-port>
-   ```
-   Example:
-   ```bash
-   http://localhost:8080
-   ```
+2. **NodePort Service**
+   - Name: `todoapp-nodeport-service`
+   - Port: `80`
+   - NodePort: `30007`
 
 ---
 
-### 3. Accessing the ToDo Application via NodePort Service
+## Steps to Deploy
 
-1. **Find the NodePort Details**:
-   Identify the NodePort service and its port by running:
-   ```bash
-   kubectl get svc
-   ```
-   Output example:
-   ```
-   NAME         TYPE           CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
-   todo-app     NodePort       10.96.109.230   <none>        8080:30007/TCP   14m
-   ```
+### 1. Apply the Manifests
 
-   In this example, `30007` is the NodePort.
+Run the following command to apply the Kubernetes manifests:
 
-2. **Access the Application via Node Port**:
-   Retrieve the IP address of a Kubernetes node (master or worker):
-   ```bash
-   kubectl get nodes -o wide
-   ```
-   Use the node's IP and NodePort to access the application, e.g.:
-   ```bash
-   http://<node-ip>:<node-port>
-   ```
-   Example:
-   ```bash
-   http://192.168.1.100:30007
-   ```
+```bash
+kubectl apply -f todoapp-deployment.yaml
+kubectl apply -f todoapp-service.yaml
+```
+
+Ensure the correct manifests are in place for `todoapp-clusterip-service` and `todoapp-nodeport-service`.
 
 ---
 
-Follow these steps to verify the functionality of the ToDo application and perform testing as required.
+### 2. Access the ClusterIP Service
+
+The `todoapp-clusterip-service` is accessible within the cluster through port `80`.
+
+Example command to test connectivity from within a pod in the cluster:
+
+```bash
+curl http://todoapp-clusterip-service:80
+```
+
+---
+
+### 3. Access the NodePort Service
+
+The `todoapp-nodeport-service` exposes the application to external clients through the node's IP on port `30007`.
+
+Example to test:
+
+```bash
+curl http://<NODE_IP>:30007
+```
+
+Replace `<NODE_IP>` with the actual IP address of the node.
+
+---
+
+### 4. Verify Deployed Services
+
+Run the following command to verify the services:
+
+```bash
+kubectl get services
+```
+
+You should see similar output:
+
+```plaintext
+NAME                         TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE
+todoapp-clusterip-service    ClusterIP   <CLUSTER_IP>    <none>        80/TCP          <AGE>
+todoapp-nodeport-service     NodePort    <CLUSTER_IP>    <none>        80:30007/TCP    <AGE>
+```
+
+---
+
+## Additional Notes
+
+- Ensure your Kubernetes cluster is running and accessible.
+- If you are running this using a cloud provider, confirm security group or firewall rules allow access through NodePort
+  `30007`.
